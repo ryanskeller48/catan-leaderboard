@@ -38,7 +38,9 @@ class Scoreboard:
                 games += [g]
 
                 for p in [p1, p2, p3, p4]:
-                    if p in players:
+                    if p is None:
+                        continue
+                    elif p in players:
                         players[p].add_game(g)
                     else:
                         new_player = Player(p)
@@ -46,6 +48,20 @@ class Scoreboard:
                         players[p].add_game(g)
                 tick += 1
         return games, players
+
+    def get_wins_leaderboard(self):
+        leaderboard = []
+        for name in self.players:
+            p = self.players[name]
+            leaderboard += [[p.num_wins(), p.name, p.tally_points()]]
+        leaderboard.sort()
+        leaderboard.reverse()
+        outstring = "Leaderboard: \n{Place}. {Name} {# Wins} ({Total points}) \n"
+        tick = 1
+        for place in leaderboard:
+            outstring += f"{tick}. {place[1]} {place[0]} ({place[2]}) \n"
+            tick += 1
+        return outstring
 
     def get_player_stats(self, name):
         if name not in self.players:
