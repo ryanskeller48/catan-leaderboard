@@ -53,10 +53,13 @@ class Scoreboard:
         else:
             outstring = ""
             p = self.players[name]
-            outstring += "Player: " + p.name + "\n"
-            outstring += "Wins: " + str(p.num_wins()) + "\n"
-            outstring += "Win % 3man: " + str(p.win_pct_3man()) + "\n"
-            outstring += "Win % 4man: " + str(p.win_pct_4man()) + "\n"
-            outstring += "Win % by opponent:" + "\n"
+            outstring += f"Player: {p.name} \n"
+            outstring += f"Wins: {str(p.num_wins())} (Total points: {p.tally_points()}) \n"
+            outstring += f"Avg points: {str(p.avg_points())} \n"
+            outstring += f"Median score: {str(p.median_score())} \n"
+            outstring += f"Lowest score: {str(p.lowest_score())} \n"
+            outstring += f"Win % 3-man: {str(p.win_pct_3man())} \n"
+            outstring += f"Win % 4-man: {str(p.win_pct_4man())} \n"
+            outstring += f"Win % by opponent: \n"
             outstring += p.win_pct_by_opp()
             return outstring

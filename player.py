@@ -121,5 +121,5 @@ class Player:
         #return opps
         outstring = ""
         for opp in opps:
-            outstring += f"{opp}: {float(opps[opp][1])/opps[opp][0] * 100}% \n"
+            outstring += f"    {opp}: {float(opps[opp][1])/opps[opp][0] * 100}% \n"
         return outstring
