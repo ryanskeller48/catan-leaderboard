@@ -34,6 +34,9 @@ class Player:
                 wins += 1
         return wins
 
+    def num_games(self):
+        return len(self.games)
+
     def num_wins_3man(self):
         wins = 0
         for game in self.games:

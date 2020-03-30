@@ -72,6 +72,35 @@ class Scoreboard:
                 last_score = place[0]
         return outstring
 
+    def get_win_pct_leaderboard(self, min_games=2):
+        leaderboard = []
+        for name in self.players:
+            p = self.players[name]
+            leaderboard += [[p.win_pct(), p.num_wins(), p.num_games(), p.name]]
+        leaderboard.sort()
+        leaderboard.reverse()
+        outstring = "Leaderboard: \n{Place}. {Name} {Win %} {# Wins}/{# Games} \n"
+        tick = 1
+        last_score = 0
+        last_place = 1
+        for place in leaderboard:
+            if place[0] == last_score:
+                outstring += f"{last_place}. {place[3]} {place[0]} {place[1]}/{place[2]}"
+                last_score = place[0]
+                tick += 1
+                if place[2] < min_games:
+                    outstring += f"  *** under minimum games threshold ({min_games})"
+                outstring += "\n"
+            else:
+                outstring += f"{tick}. {place[3]} {place[0]} {place[1]}/{place[2]}"
+                last_place = tick
+                tick += 1
+                if place[2] < min_games:
+                    outstring += f"  *** under minimum games threshold ({min_games})"
+                last_score = place[0]
+                outstring += "\n"
+        return outstring
+
     def get_player_stats(self, name):
         if name not in self.players:
             return "Bad player name"
