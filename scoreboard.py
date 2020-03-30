@@ -53,14 +53,23 @@ class Scoreboard:
         leaderboard = []
         for name in self.players:
             p = self.players[name]
-            leaderboard += [[p.num_wins(), p.name, p.tally_points()]]
+            leaderboard += [[p.num_wins(), p.tally_points(), p.name]]
         leaderboard.sort()
         leaderboard.reverse()
         outstring = "Leaderboard: \n{Place}. {Name} {# Wins} ({Total points}) \n"
         tick = 1
+        last_score = 0
+        last_place = 1
         for place in leaderboard:
-            outstring += f"{tick}. {place[1]} {place[0]} ({place[2]}) \n"
-            tick += 1
+            if place[0] == last_score:
+                outstring += f"{last_place}. {place[2]} {place[0]} ({place[1]}) \n"
+                last_score = place[0]
+                tick += 1
+            else:
+                outstring += f"{tick}. {place[2]} {place[0]} ({place[1]}) \n"
+                last_place = tick
+                tick += 1
+                last_score = place[0]
         return outstring
 
     def get_player_stats(self, name):
