@@ -105,5 +105,33 @@ class GroupMe:
         if response is not None and response != []:
             return response['response']
 
+    def filter_messages(self, messages, user=None, text=None, dateOn=None, dateBefore=None, dateAfter=None):
+        """ filter messages by text, sender, date, etc. """
 
-        
+        filtered = []
+
+        for message in messages:
+            passes = True
+
+            if user:
+                if 'sender_id' in message:
+                    if message['sender_id'] != user:
+                        passes = False
+                else:
+                    passes = False
+
+            if text:
+                if 'text' in message:
+                    if message['text'] is not None:
+                        if text not in message['text']:
+                            passes = False
+                    else:
+                        passes = False
+                else:
+                    passes = False
+
+            if passes:
+                filtered += [message]
+
+        return filtered
+
