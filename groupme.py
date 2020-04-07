@@ -62,14 +62,48 @@ class GroupMe:
         if response is not None and response != []:
             return response['response']
 
-    def get_1page_group_messages(self, groupid, page=0):
+    def get_1page_messages(self, groupid, before=0, group=False, chat=False, chatid=None):
 
         params = {"token": self.api_token, "limit": 20}
         
-        if page:
-            params["before_id"] = page
+        if before:
+            params["before_id"] = before
         
-        response = self._api_request(f"groups/{groupid}/messages", params=params)
+        if group:
+            response = self._api_request(f"groups/{groupid}/messages", params=params)
+        elif chat:
+            if chatid:
+                params["other_user_id"] = chatid
+            response = self._api_request(f"direct_messages", params=params)
+        else:
+            return None
+
         if response is not None and response != []:
-            return response['response']['messages']
+            if chat:
+                return response['response']['direct_messages']
+            else:
+                return response['response']['messages']
+
+    def get_all_messages(self, groupid, group=False, chat=False, chatid=None):
+
+        params = {"token": self.api_token, "limit": 20}
+        all_messages = []
+
+        some_messages = self.get_1page_messages(groupid, group=group, chat=chat, chatid=chatid)
+
+        while some_messages is not None and len(some_messages) > 0:
+            last_id = some_messages[-1]['id']
+            all_messages += some_messages
+            some_messages = self.get_1page_messages(groupid, before=last_id, group=group, chat=chat, chatid=chatid)
+
+        return all_messages
+
+    def get_chats(self):
+
+        params = {"token": self.api_token}
+        response = self._api_request("chats", params=params)
+        if response is not None and response != []:
+            return response['response']
+
+
         
