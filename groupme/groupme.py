@@ -3,6 +3,7 @@ import json
 import os
 import requests
 from datetime import datetime, date, timedelta
+from random import randint
 
 class APIAuthException(Exception):
     pass
@@ -38,7 +39,8 @@ class GroupMe:
     def _api_request_post(self, endpoint, data, headers=None):
         """ helper to do API POST calls """
 
-        all_headers = {"Authorization": self.auth_header}
+        all_headers = {"Content-Type": "application/json"}
+
         if headers:
             for header in headers:
                 all_headers[header] = headers[header]
@@ -47,9 +49,8 @@ class GroupMe:
         code = response.status_code
         if 200 <= code < 300:
             logging.debug(f"API POST call: {self.api_url}/{endpoint} | {code}")
-            encoding = response.encoding
             raw = response.content
-            return json.loads(raw.decode(encoding))
+            return json.loads(raw)
         elif code > 500:
             raise APIAuthException
         else:
@@ -86,6 +87,13 @@ class GroupMe:
             if group['name'] == name:
                 return group['id']
 
+    def get_chat_id(self, name):
+
+        chats = self.get_chats()
+        for chat in chats:
+            if chat['other_user']['name'] == name:
+                return chat['other_user']['id']
+
     def get_group_members(self, name=None, groupid=None):
         """ get list of members for a group """
 
@@ -103,12 +111,16 @@ class GroupMe:
                 if member['name'] == name or member['nickname'] == nickname:
                     return member['user_id']
 
-    def get_1page_messages(self, groupid=None, groupname=None, before=0, group=False, chat=False, chatid=None):
+    def get_1page_messages(self, name=None, groupid=None, chatid=None, before=0, group=False, chat=False):
         """ by default, messages return 20 at a time, so need to paginate to get all """
 
-        if not groupname and not groupid: return None
-        elif groupname and not groupid:
-            groupid = self.get_group_id(groupname)
+        if not name and not groupid and not chatid: return
+
+        elif name and not groupid and group:
+            groupid = self.get_group_id(name)
+
+        elif name and not chatid and chat:
+            chatid = self.get_chat_id(name)
 
         params = {"token": self.api_token, "limit": 20}
         
@@ -130,18 +142,26 @@ class GroupMe:
             else:
                 return response['response']['messages']
 
-    def get_all_messages(self, groupid=None, groupname=None, group=False, chat=False, chatid=None):
+    def get_all_messages(self, name=None, groupid=None, chatid=None, group=False, chat=False):
         """ helper to paginate messages -- paginates on id of last message """
+
+        if not name and not groupid and not chatid: return
+
+        elif name and not groupid and group:
+            groupid = self.get_group_id(name)
+
+        elif name and not chatid and chat:
+            chatid = self.get_chat_id(name)
 
         params = {"token": self.api_token, "limit": 20}
         all_messages = []
 
-        some_messages = self.get_1page_messages(groupid=groupid, groupname=groupname, group=group, chat=chat, chatid=chatid)
+        some_messages = self.get_1page_messages(name=name, groupid=groupid, chatid=chatid, group=group, chat=chat)
 
         while some_messages is not None and len(some_messages) > 0:
             last_id = some_messages[-1]['id']
             all_messages += some_messages
-            some_messages = self.get_1page_messages(groupid=groupid, groupname=groupname, before=last_id, group=group, chat=chat, chatid=chatid)
+            some_messages = self.get_1page_messages(name=name, groupid=groupid, chatid=chatid, before=last_id, group=group, chat=chat)
 
         return all_messages
 
@@ -219,3 +239,45 @@ class GroupMe:
 
         return filtered
 
+    def send_message(self, text, name=None, groupid=None, chatid=None, group=False, chat=False):
+        """ send message to specified group/chat """
+
+        if not group and not chat:
+            return
+
+        elif group:
+
+            data = {
+                "message": {
+                    "source_guid": f"{randint(1, 9999)}",
+                    "text": f"{text} (API test)"
+                }
+            }
+
+            if not name and not groupid:
+                return
+            elif not groupid and name:
+                groupid = self.get_group_id(groupname)
+
+            response = self._api_request_post(f"groups/{groupid}/messages?token={self.api_token}", json.dumps(data))
+
+            return response
+
+        elif chat:
+
+            if not chatid and not name:
+                return
+            elif not chatid and name:
+                chatid = self.get_chat_id(name)
+
+            data = {
+                "direct_message": {
+                    "source_guid": f"{randint(1, 9999)}",
+                    "recipient_id": chatid,
+                    "text": f"{text} (API test)"
+                }
+            }
+
+            response = self._api_request_post(f"direct_messages?token={self.api_token}", json.dumps(data))
+
+            return response
