@@ -4,6 +4,7 @@ import os
 import requests
 from datetime import datetime, date, timedelta
 from random import randint
+import re
 
 class APIAuthException(Exception):
     pass
@@ -31,7 +32,7 @@ class GroupMe:
             encoding = response.encoding
             raw = response.content
             return json.loads(raw.decode(encoding))
-        elif code > 500:
+        elif code >= 500:
             raise APIAuthException
         else:
             logging.error(f"ERROR: Bad API call: {self.api_url}/{endpoint} | {code}")
@@ -51,7 +52,7 @@ class GroupMe:
             logging.debug(f"API POST call: {self.api_url}/{endpoint} | {code}")
             raw = response.content
             return json.loads(raw)
-        elif code > 500:
+        elif code >= 500:
             raise APIAuthException
         else:
             logging.error(f"ERROR: Bad API POST call: {self.api_url}/{endpoint} | {code}")
@@ -122,7 +123,7 @@ class GroupMe:
         elif name and not chatid and chat:
             chatid = self.get_chat_id(name)
 
-        params = {"token": self.api_token, "limit": 20}
+        params = {"token": self.api_token, "limit": 100}
         
         if before:
             params["before_id"] = before
@@ -142,7 +143,7 @@ class GroupMe:
             else:
                 return response['response']['messages']
 
-    def get_all_messages(self, name=None, groupid=None, chatid=None, group=False, chat=False):
+    def get_all_messages(self, name=None, groupid=None, chatid=None, group=False, chat=False, filt=None):
         """ helper to paginate messages -- paginates on id of last message """
 
         if not name and not groupid and not chatid: return
@@ -153,13 +154,18 @@ class GroupMe:
         elif name and not chatid and chat:
             chatid = self.get_chat_id(name)
 
-        params = {"token": self.api_token, "limit": 20}
+        params = {"token": self.api_token, "limit": 100}
         all_messages = []
 
         some_messages = self.get_1page_messages(name=name, groupid=groupid, chatid=chatid, group=group, chat=chat)
 
         while some_messages is not None and len(some_messages) > 0:
+
             last_id = some_messages[-1]['id']
+
+            if filt:
+                some_messages = filt(some_messages)
+
             all_messages += some_messages
             some_messages = self.get_1page_messages(name=name, groupid=groupid, chatid=chatid, before=last_id, group=group, chat=chat)
 
@@ -183,6 +189,10 @@ class GroupMe:
             response = self._api_request("chats", params=params)
 
         return all_chats
+
+    def filter_lambda(self, user=None, userid=None, text=None, dateOn=None, dateBefore=None, dateAfter=None):
+        return lambda messages : self.filter_messages(messages, user=user, userid=userid, text=text, dateOn=dateOn,
+                                                      dateBefore=dateBefore, dateAfter=dateAfter)
 
     def filter_messages(self, messages, user=None, userid=None, text=None, dateOn=None, dateBefore=None, dateAfter=None):
         """ filter messages by text, sender, date, etc. """
@@ -208,11 +218,13 @@ class GroupMe:
 
             if text:
                 if 'text' in message:
-                    if message['text'] is not None:
-                        if text not in message['text']:
-                            passes = False
-                    else:
+                    t = message['text']
+                    if t is None: 
                         passes = False
+                    else:
+                        search = re.search(text, t)
+                        if search is None:
+                            passes = False
                 else:
                     passes = False
 
@@ -250,7 +262,7 @@ class GroupMe:
             data = {
                 "message": {
                     "source_guid": f"{randint(1, 9999)}",
-                    "text": f"{text} (API test)"
+                    "text": text
                 }
             }
 
@@ -274,7 +286,7 @@ class GroupMe:
                 "direct_message": {
                     "source_guid": f"{randint(1, 9999)}",
                     "recipient_id": chatid,
-                    "text": f"{text} (API test)"
+                    "text": text
                 }
             }
 
